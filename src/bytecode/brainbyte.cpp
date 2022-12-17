@@ -77,7 +77,7 @@ std::vector<uint8_t> compileByteCode(std::string& source)
         case '>': {
             // Count how long the sequence of '>' is. (up until 255)
             uint8_t n = 1;
-            for (; source.at(instructionPointer + n) == '>' && n < 255; n++)
+            for (; (instructionPointer + n) < source.size() && source.at(instructionPointer + n) == '>' && n < 255; n++)
                 ;
 
             // Also increase the instruction pointer accordingly.
@@ -91,7 +91,7 @@ std::vector<uint8_t> compileByteCode(std::string& source)
         case '<': {
             // Count how long the sequence of '<' is. (up until 255)
             uint8_t n = 1;
-            for (; source.at(instructionPointer + n) == '<' && n < 255; n++)
+            for (; (instructionPointer + n) < source.size() && source.at(instructionPointer + n) == '<' && n < 255; n++)
                 ;
 
             // Also increase the instruction pointer accordingly.
@@ -105,7 +105,7 @@ std::vector<uint8_t> compileByteCode(std::string& source)
         case '+': {
             // Count how long the sequence of '+' is. (up until 255)
             uint8_t n = 1;
-            for (; source.at(instructionPointer + n) == '+' && n < 255; n++)
+            for (; (instructionPointer + n) < source.size() && source.at(instructionPointer + n) == '+' && n < 255; n++)
                 ;
 
             // Also increase the instruction pointer accordingly.
@@ -156,7 +156,7 @@ std::vector<uint8_t> compileByteCode(std::string& source)
             jumpStack.pop_front();
 
             // Patch the opening instruction
-            patchEightBytes(opcodes, opening + 1, opcodes.size() + 9); // FIXME: why is it 9???
+            patchEightBytes(opcodes, opening + 1, opcodes.size() + 8); // FIXME: why is it 9???
 
             // Emit Opcodes for closing
             emitByte(opcodes, OP_CLOSE);
@@ -253,6 +253,7 @@ int main(int argc, char const* argv[])
     // Compile the code to bytecode
     auto opcodes = compileByteCode(source);
     // printByteCode(opcodes);
+    // exit(0);
 
     // Interpret the bytecode
     for (; instructionPointer < opcodes.size(); instructionPointer++) {
