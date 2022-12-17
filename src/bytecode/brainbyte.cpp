@@ -138,7 +138,6 @@ std::vector<uint8_t> compileByteCode(std::string& source)
             break;
         case '[': {
             jumpStack.push_back(opcodes.size());
-            std::cout << "Open: " << opcodes.size() << std::endl;
 
             // Emit the bytecode to a open jump and an invalid jump target that
             // we will patch later when we find the matching closing bracket.
@@ -157,8 +156,7 @@ std::vector<uint8_t> compileByteCode(std::string& source)
             jumpStack.pop_front();
 
             // Patch the opening instruction
-            patchEightBytes(opcodes, opening + 1, opcodes.size() + 9);
-            std::cout << "Close: " << opcodes.size() << std::endl;
+            patchEightBytes(opcodes, opening + 1, opcodes.size() + 9); // FIXME: why is it 9???
 
             // Emit Opcodes for closing
             emitByte(opcodes, OP_CLOSE);
@@ -254,7 +252,7 @@ int main(int argc, char const* argv[])
 
     // Compile the code to bytecode
     auto opcodes = compileByteCode(source);
-    printByteCode(opcodes);
+    // printByteCode(opcodes);
 
     // Interpret the bytecode
     for (; instructionPointer < opcodes.size(); instructionPointer++) {
@@ -294,6 +292,8 @@ int main(int argc, char const* argv[])
         case OP_OPEN: {
             // If the byte at the datapointer is not zero we don't do anything
             if (array[dataPointer] != 0) {
+                // jump over argument
+                instructionPointer += 8;
                 break;
             }
 
@@ -304,8 +304,11 @@ int main(int argc, char const* argv[])
         }
 
         case OP_CLOSE: {
+
             // If the byte at the datapointer is zero we don't do anything
             if (array[dataPointer] == 0) {
+                // jump over argument
+                instructionPointer += 8;
                 break;
             }
 
