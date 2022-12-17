@@ -24,7 +24,6 @@ int main(int argc, char const* argv[])
 
     // Program loop
     for (; instructionPointer < source.size(); instructionPointer++) {
-        std::cout << instructionPointer << std::endl;
         switch (source.at(instructionPointer)) {
         case '>':
             dataPointer++;
@@ -36,7 +35,7 @@ int main(int argc, char const* argv[])
             array[dataPointer]++;
             break;
         case '-':
-            array[dataPointer]++;
+            array[dataPointer]--;
             break;
         case '.':
             std::putchar(array[dataPointer]);
@@ -50,6 +49,8 @@ int main(int argc, char const* argv[])
                 break;
             }
 
+            // FIXME: We should cache the targets position in a map instead of
+            // always calculating it.
             // If it is zero we jump forward to the next matching ']'
             uint32_t nesting = 1;
             while (true) {
@@ -84,6 +85,8 @@ int main(int argc, char const* argv[])
                 break;
             }
 
+            // FIXME: We should cache the targets position in a map instead of
+            // always calculating it.
             // Otherwise we go back until the matching '['
             uint32_t nesting = 1;
             while (true) {
