@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <unordered_map>
 
 int main(int argc, char const* argv[])
 {
@@ -21,6 +22,7 @@ int main(int argc, char const* argv[])
     std::memset(array, 0, 30000);
     uint32_t dataPointer = 0;
     uint64_t instructionPointer = 0;
+    std::unordered_map<uint64_t, uint64_t> jumpCache;
 
     // Program loop
     for (; instructionPointer < source.size(); instructionPointer++) {
@@ -49,9 +51,15 @@ int main(int argc, char const* argv[])
                 break;
             }
 
-            // FIXME: We should cache the targets position in a map instead of
-            // always calculating it.
             // If it is zero we jump forward to the next matching ']'
+            // First let's check if we already have it cached
+            if (jumpCache.find(instructionPointer) != jumpCache.end()) {
+                instructionPointer = jumpCache.at(instructionPointer);
+                break;
+            }
+
+            // Since it is not cached we need to calculate it.
+            uint64_t oldInstructionPointer = instructionPointer;
             uint32_t nesting = 1;
             while (true) {
                 // Do some bound checking
@@ -73,6 +81,7 @@ int main(int argc, char const* argv[])
 
                 // Exit if the match was found
                 if (nesting == 0) {
+                    jumpCache[oldInstructionPointer] = instructionPointer;
                     break;
                 }
             }
@@ -85,9 +94,15 @@ int main(int argc, char const* argv[])
                 break;
             }
 
-            // FIXME: We should cache the targets position in a map instead of
-            // always calculating it.
             // Otherwise we go back until the matching '['
+            // First let's check if we already have it cached
+            if (jumpCache.find(instructionPointer) != jumpCache.end()) {
+                instructionPointer = jumpCache.at(instructionPointer);
+                break;
+            }
+
+            // Since it is not cached we need to calculate it.
+            uint64_t oldInstructionPointer = instructionPointer;
             uint32_t nesting = 1;
             while (true) {
                 // Do some bound checking
@@ -108,8 +123,10 @@ int main(int argc, char const* argv[])
                 }
 
                 // Exit if we found the match
-                if (nesting == 0)
+                if (nesting == 0) {
+                    jumpCache[oldInstructionPointer] = instructionPointer;
                     break;
+                }
             }
 
             break;
