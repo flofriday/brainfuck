@@ -1,12 +1,12 @@
 # Brainfuck
 
-A repository to play with different brainfuck implementations
+A repository to play with different brainfuck implementations.
 
 ## Motivation 
 
 I am currently working on a jit compiler generator as my bachelor thesis so I
-wanted to actually implement some jit compiler to get a feeling for it and 
-brainfuck is a small enough language that suits itself to it.
+wanted to actually implement some jit compilers to get a feeling for it and 
+brainfuck is a small enough language that it suits itself as a target.
 
 In the future I might use this repository to benchmark the generated JIT from
 my bachelor thesis and compare with other JIT libraries.
@@ -37,8 +37,9 @@ instructions.
 Here are all the patterns it detects:
 - Repeating increment/decrement instructions (`>`, `<`, `+`, `-`) are merged 
   into one opcode with an aditional byte storing the count.
-- Jump instructions (`[`, `]`) store eight byte the target position (this should 
-  just as effective as brainint's jump target caching).
+- Clear loop detection `[-]`.
+- Jump instructions (`[`, `]`) store with eight bytes which store the target position 
+  (this should just as effective as brainint's jump target caching).
 
 For brainbytes OpCodes I was inspired by [this article](http://calmerthanyouare.org/2015/01/07/optimizing-brainfuck.html).
 
@@ -69,5 +70,5 @@ to use `brainint`:
 
 ## Ressources
 
-[Brainfuck on esolang](https://esolangs.org/wiki/Brainfuck)
-[Brainfuck optimizations](http://calmerthanyouare.org/2015/01/07/optimizing-brainfuck.html)
+- [Brainfuck on esolang](https://esolangs.org/wiki/Brainfuck)
+- [Brainfuck optimizations](http://calmerthanyouare.org/2015/01/07/optimizing-brainfuck.html)
