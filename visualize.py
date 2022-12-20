@@ -5,7 +5,7 @@ import subprocess
 import pandas as pd
 
 PROGRAMS = ["brainint", "brainbyte"]
-BENCHMARKS = ["helloworld.bf", "mandelbrot.bf"]
+BENCHMARKS = ["helloworld.bf", "99bottles.bf", "mandelbrot.bf"]
 
 
 def run(target):

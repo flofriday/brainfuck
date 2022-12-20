@@ -295,9 +295,9 @@ int main(int argc, char const* argv[])
 
     // Compile the code to bytecode
     auto opcodes = compileByteCode(source);
-    printByteCode(opcodes);
-    std::cout << opcodes.size() << std::endl;
-    exit(0);
+    // printByteCode(opcodes);
+    // std::cout << opcodes.size() << std::endl;
+    // exit(0);
 
     // Interpret the bytecode
     for (; instructionPointer < opcodes.size(); instructionPointer++) {
