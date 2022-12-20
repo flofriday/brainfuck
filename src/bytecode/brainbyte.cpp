@@ -2,6 +2,7 @@
 #include <cstring>
 #include <deque>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -32,7 +33,7 @@ void emitEightBytes(std::vector<uint8_t>& opcodes, uint64_t bytes)
     }
 }
 
-void patchByte(std::vector<uint8_t>& opcodes, uint8_t index, uint8_t byte)
+void patchByte(std::vector<uint8_t>& opcodes, uint64_t index, uint8_t byte)
 {
     opcodes[index] = byte;
 }
@@ -137,7 +138,7 @@ std::vector<uint8_t> compileByteCode(std::string& source)
             emitByte(opcodes, OP_READ);
             break;
         case '[': {
-            jumpStack.push_back(opcodes.size());
+            jumpStack.push_front(opcodes.size());
 
             // Emit the bytecode to a open jump and an invalid jump target that
             // we will patch later when we find the matching closing bracket.
@@ -156,7 +157,7 @@ std::vector<uint8_t> compileByteCode(std::string& source)
             jumpStack.pop_front();
 
             // Patch the opening instruction
-            patchEightBytes(opcodes, opening + 1, opcodes.size() + 8); // FIXME: why is it 9???
+            patchEightBytes(opcodes, opening + 1, opcodes.size() + 8);
 
             // Emit Opcodes for closing
             emitByte(opcodes, OP_CLOSE);
@@ -181,52 +182,71 @@ void printByteCode(std::vector<uint8_t> opcodes)
     for (uint64_t instructionPointer = 0; instructionPointer < opcodes.size(); instructionPointer++) {
         switch (opcodes.at(instructionPointer)) {
         case OP_RIGHT: {
+            uint64_t pos = instructionPointer;
             uint8_t argument = readByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
             std::cout << "OP_RIGHT " << (int)argument << std::endl;
             break;
         }
 
         case OP_LEFT: {
+            uint64_t pos = instructionPointer;
             uint8_t argument = readByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
             std::cout << "OP_LEFT " << (int)argument << std::endl;
             break;
         }
 
         case OP_INC: {
+            uint64_t pos = instructionPointer;
             uint8_t argument = readByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
             std::cout << "OP_INC " << (int)argument << std::endl;
             break;
         }
 
         case OP_DEC: {
+            uint64_t pos = instructionPointer;
             uint8_t argument = readByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
             std::cout << "OP_DEC " << (int)argument << std::endl;
             break;
         }
 
-        case OP_WRITE:
+        case OP_WRITE: {
+            uint64_t pos = instructionPointer;
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
             std::cout << "OP_WRITE" << std::endl;
             break;
+        }
 
-        case OP_READ:
+        case OP_READ: {
+            uint64_t pos = instructionPointer;
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
             std::cout << "OP_READ" << std::endl;
             break;
+        }
 
         case OP_OPEN: {
+            uint64_t pos = instructionPointer;
             uint64_t argument = readEightByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
             std::cout << "OP_OPEN " << argument << std::endl;
             break;
         }
 
         case OP_CLOSE: {
+            uint64_t pos = instructionPointer;
             uint64_t argument = readEightByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
             std::cout << "OP_CLOSE " << argument << std::endl;
             break;
         }
 
         default:
             std::cerr << "ERROR: Unknown opcode!" << std::endl;
-            std::cerr << (int)opcodes.at(instructionPointer) << std::endl;
+            std::cerr << "InstructionPointer: " << instructionPointer << std::endl;
+            std::cerr << "OpCode: " << (int)opcodes.at(instructionPointer) << std::endl;
             exit(1);
         }
     }
