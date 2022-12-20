@@ -18,6 +18,7 @@ enum OpCode {
     OP_READ, //     no argument
     OP_OPEN, //     8 byte argument to indicate the target position
     OP_CLOSE, //    8 byte argument to indicate the target position
+    OP_CLEAR, //    no argument
 };
 
 void emitByte(std::vector<uint8_t>& opcodes, uint8_t byte)
@@ -66,6 +67,16 @@ uint64_t readEightByteArgument(std::vector<uint8_t>& opcodes, uint64_t& instruct
         out += readByteArgument(opcodes, instructionPointer);
     }
     return out;
+}
+
+bool isClearLoop(std::string& source, uint64_t instructionPointer)
+{
+    if (source.length() < instructionPointer + 3)
+        return false;
+
+    // return source.at(instructionPointer + 1) == '-' && source.at(instructionPointer + 2) == ']';
+    std::string nextThree = source.substr(instructionPointer, 3);
+    return nextThree == "[-]";
 }
 
 std::vector<uint8_t> compileByteCode(std::string& source)
@@ -138,6 +149,13 @@ std::vector<uint8_t> compileByteCode(std::string& source)
             emitByte(opcodes, OP_READ);
             break;
         case '[': {
+            // First check if this is a Clear loop `[-]`
+            if (isClearLoop(source, instructionPointer)) {
+                emitByte(opcodes, OP_CLEAR);
+                instructionPointer += 2;
+                break;
+            }
+
             jumpStack.push_front(opcodes.size());
 
             // Emit the bytecode to a open jump and an invalid jump target that
@@ -243,6 +261,11 @@ void printByteCode(std::vector<uint8_t> opcodes)
             break;
         }
 
+        case OP_CLEAR: {
+            std::cout << "OP_CLEAR " << std::endl;
+            break;
+        }
+
         default:
             std::cerr << "ERROR: Unknown opcode!" << std::endl;
             std::cerr << "InstructionPointer: " << instructionPointer << std::endl;
@@ -272,8 +295,9 @@ int main(int argc, char const* argv[])
 
     // Compile the code to bytecode
     auto opcodes = compileByteCode(source);
-    // printByteCode(opcodes);
-    // exit(0);
+    printByteCode(opcodes);
+    std::cout << opcodes.size() << std::endl;
+    exit(0);
 
     // Interpret the bytecode
     for (; instructionPointer < opcodes.size(); instructionPointer++) {
@@ -302,14 +326,6 @@ int main(int argc, char const* argv[])
             break;
         }
 
-        case OP_WRITE:
-            std::putchar(array[dataPointer]);
-            break;
-
-        case OP_READ:
-            array[dataPointer] = std::getchar();
-            break;
-
         case OP_OPEN: {
             // If the byte at the datapointer is not zero we don't do anything
             if (array[dataPointer] != 0) {
@@ -325,7 +341,6 @@ int main(int argc, char const* argv[])
         }
 
         case OP_CLOSE: {
-
             // If the byte at the datapointer is zero we don't do anything
             if (array[dataPointer] == 0) {
                 // jump over argument
@@ -338,6 +353,19 @@ int main(int argc, char const* argv[])
             instructionPointer = argument;
             break;
         }
+
+        case OP_CLEAR: {
+            array[dataPointer] = 0;
+            break;
+        }
+
+        case OP_WRITE:
+            std::putchar(array[dataPointer]);
+            break;
+
+        case OP_READ:
+            array[dataPointer] = std::getchar();
+            break;
 
         default:
             std::cerr << "ERROR: Unknown opcode!" << std::endl;
