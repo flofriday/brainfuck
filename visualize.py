@@ -3,6 +3,7 @@
 import time
 import subprocess
 import pandas as pd
+import concurrent.futures
 
 PROGRAMS = ["brainint", "brainbyte"]
 BENCHMARKS = ["helloworld.bf", "99bottles.bf", "mandelbrot.bf", "hanoi.bf"]
@@ -11,11 +12,19 @@ BENCHMARKS = ["helloworld.bf", "99bottles.bf", "mandelbrot.bf", "hanoi.bf"]
 def run(target):
     executable = "build/" + target[0]
     program = "examples/" + target[1]
-    print(f"Running ./{executable} {program}... \t", end="", flush=True)
 
     start = time.time_ns()
     subprocess.run([executable, program], capture_output=True)
     elapsed_ms = (time.time_ns() - start) / 1000 / 1000
+    return elapsed_ms
+
+
+def run_multiple(target, n):
+    print(f"Running {target[1]} on {target[0]} ...\t", end="", flush=True)
+    with concurrent.futures.ProcessPoolExecutor(max_workers=n) as executor:
+        # Start the load operations and mark each future with its URL
+        result = executor.map(run, [target for _ in range(n)])
+    elapsed_ms = min(result)
     print(f" [{elapsed_ms:.2f}ms]")
     return elapsed_ms
 
@@ -57,7 +66,7 @@ def main():
 
     results = {b: dict() for b in BENCHMARKS}
     for target in targets:
-        elapsed_ms = run(target)
+        elapsed_ms = run_multiple(target, 5)
         results[target[1]][target[0]] = elapsed_ms
 
     plot(results)
