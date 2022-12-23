@@ -172,6 +172,27 @@ bool tryCompileMultiplyLoop(std::string& source, uint64_t& instructionPointer, s
     return true;
 }
 
+std::string removeComments(std::string& source)
+{
+    std::string out;
+    for (auto c : source) {
+        switch (c) {
+        case '>':
+        case '<':
+        case '+':
+        case '-':
+        case '.':
+        case ',':
+        case '[':
+        case ']':
+            out += c;
+        default:
+            break;
+        }
+    }
+    return out;
+}
+
 std::vector<uint8_t> compileByteCode(std::string& source)
 {
     std::vector<uint8_t> opcodes;
@@ -406,6 +427,7 @@ int main(int argc, char const* argv[])
 
     std::ifstream in(argv[argc - 1]);
     std::string source(static_cast<std::stringstream const&>(std::stringstream() << in.rdbuf()).str());
+    source = removeComments(source);
 
     // Setup the datastructure
     uint8_t array[30000];
