@@ -11,28 +11,17 @@
 #include <vector>
 
 enum OpCode {
-    OP_RIGHT, //    1 byte argument to indicate how far to the right
-    OP_LEFT, //     1 byte argument to indicate how far to the left
-    OP_INC, //      1 byte argument to tell by how much we increment
-    OP_DEC, //      1 byte argument to tell by how much we decrement
-    OP_INC_OFF, //  2 bytes arguments the first is the offset and the other the count
-    OP_DEC_OFF, //  2 bytes arguments the first is the offset and the other the count
+    OP_MOVE, //     1 signed byte argument to indicate moves
+             //     (positive right, negative left)
+    OP_INC, //      2 singend byte argument to tell by how much we increment (negative for decrement)
+            //      first is the offset, second is the count
     OP_WRITE, //    no argument
     OP_READ, //     no argument
     OP_OPEN, //     8 byte argument to indicate the target position
     OP_CLOSE, //    8 byte argument to indicate the target position
     OP_CLEAR, //    no argument
-    OP_COPY, //     1 singed byte arguments  for the offset
-    OP_MUL, //      2 singed byte arguments one, for the offset and other one for the
+    OP_MUL, //      2 singed byte arguments, first for the offset and other one for the
             //      factor
-};
-
-struct CompileOptions {
-    bool allow_OP_INC_OFF;
-    bool allow_OP_DEC_OFF;
-    bool allow_OP_CLEAR;
-    bool allow_OP_COPY;
-    bool allow_OP_MUL;
 };
 
 void emitByte(std::vector<uint8_t>& opcodes, uint8_t byte)
@@ -87,53 +76,20 @@ void printByteCode(std::vector<uint8_t> opcodes)
 {
     for (uint64_t instructionPointer = 0; instructionPointer < opcodes.size(); instructionPointer++) {
         switch (opcodes.at(instructionPointer)) {
-        case OP_RIGHT: {
+        case OP_MOVE: {
             uint64_t pos = instructionPointer;
-            uint8_t argument = readByteArgument(opcodes, instructionPointer);
+            int8_t argument = readByteArgument(opcodes, instructionPointer);
             std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
-            std::cout << "OP_RIGHT " << (int)argument << std::endl;
-            break;
-        }
-
-        case OP_LEFT: {
-            uint64_t pos = instructionPointer;
-            uint8_t argument = readByteArgument(opcodes, instructionPointer);
-            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
-            std::cout << "OP_LEFT " << (int)argument << std::endl;
+            std::cout << "OP_MOVE " << (int)argument << std::endl;
             break;
         }
 
         case OP_INC: {
             uint64_t pos = instructionPointer;
-            uint8_t argument = readByteArgument(opcodes, instructionPointer);
-            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
-            std::cout << "OP_INC " << (int)argument << std::endl;
-            break;
-        }
-
-        case OP_INC_OFF: {
-            uint64_t pos = instructionPointer;
             int8_t offset = readByteArgument(opcodes, instructionPointer);
-            uint8_t increment = readByteArgument(opcodes, instructionPointer);
+            int8_t n = readByteArgument(opcodes, instructionPointer);
             std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
-            std::cout << "OP_INC_OFF " << (int)offset << " " << (int)increment << std::endl;
-            break;
-        }
-
-        case OP_DEC: {
-            uint64_t pos = instructionPointer;
-            uint8_t argument = readByteArgument(opcodes, instructionPointer);
-            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
-            std::cout << "OP_DEC " << (int)argument << std::endl;
-            break;
-        }
-
-        case OP_DEC_OFF: {
-            uint64_t pos = instructionPointer;
-            int8_t offset = readByteArgument(opcodes, instructionPointer);
-            uint8_t decrement = readByteArgument(opcodes, instructionPointer);
-            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
-            std::cout << "OP_DEC_OFF " << (int)offset << " " << (int)decrement << std::endl;
+            std::cout << "OP_INC " << (int)offset << " " << (int)n << std::endl;
             break;
         }
 
@@ -184,14 +140,6 @@ void printByteCode(std::vector<uint8_t> opcodes)
             break;
         }
 
-        case OP_COPY: {
-            uint64_t pos = instructionPointer;
-            int8_t offset = readByteArgument(opcodes, instructionPointer);
-            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
-            std::cout << "OP_COPY " << (int)offset << " " << std::endl;
-            break;
-        }
-
         default:
             std::cerr << "ERROR: Unknown opcode!" << std::endl;
             std::cerr << "InstructionPointer: " << instructionPointer << std::endl;
@@ -215,7 +163,7 @@ bool tryCompileDeferredMoves(std::string& source, uint64_t& instructionPointer, 
 {
     // NOTE: we use a singed 16 bit int here because we want to store increments
     // and decrements in the same datastructure.
-    std::map<int8_t, int16_t> offsetIncrements;
+    std::map<int8_t, int8_t> offsetIncrements;
 
     uint64_t currInstructionPointer = instructionPointer;
     int8_t currOffset = 0;
@@ -245,7 +193,7 @@ bool tryCompileDeferredMoves(std::string& source, uint64_t& instructionPointer, 
                 offsetIncrements[currOffset] = 0;
             }
 
-            if (offsetIncrements[currOffset] == UINT8_MAX) {
+            if (offsetIncrements[currOffset] == INT8_MAX) {
                 keepLooping = false;
                 break;
             }
@@ -258,7 +206,7 @@ bool tryCompileDeferredMoves(std::string& source, uint64_t& instructionPointer, 
                 offsetIncrements[currOffset] = 0;
             }
 
-            if (offsetIncrements[currOffset] == UINT8_MAX) {
+            if (offsetIncrements[currOffset] == INT8_MAX) {
                 keepLooping = false;
                 break;
             }
@@ -283,26 +231,21 @@ bool tryCompileDeferredMoves(std::string& source, uint64_t& instructionPointer, 
     // Write all increments and decrements with the offset
     for (auto it : offsetIncrements) {
         int8_t offset = it.first;
-        int16_t increment = it.second;
+        int8_t increment = it.second;
 
-        if (increment > 0) {
-            emitByte(opcodes, OP_INC_OFF);
-            emitByte(opcodes, offset);
-            emitByte(opcodes, (uint8_t)increment);
-        } else {
-            emitByte(opcodes, OP_DEC_OFF);
-            emitByte(opcodes, offset);
-            emitByte(opcodes, (uint8_t)(-increment));
+        if (increment == 0) {
+            continue;
         }
+
+        emitByte(opcodes, OP_INC);
+        emitByte(opcodes, offset);
+        emitByte(opcodes, (int8_t)increment);
     }
 
     // Finally write the deferred move it is not zero
-    if (currOffset > 0) {
-        emitByte(opcodes, OP_RIGHT);
-        emitByte(opcodes, (uint8_t)(currOffset));
-    } else if (currOffset < 0) {
-        emitByte(opcodes, OP_LEFT);
-        emitByte(opcodes, (uint8_t)(-currOffset));
+    if (currOffset != 0) {
+        emitByte(opcodes, OP_MOVE);
+        emitByte(opcodes, (int8_t)(currOffset));
     }
 
     // Adjust the instruction pointer to the one before the current one cause
@@ -391,14 +334,9 @@ bool tryCompileMultiplyLoop(std::string& source, uint64_t& instructionPointer, s
         if (offset == 0)
             continue;
 
-        if (factor == 1) {
-            emitByte(opcodes, OP_COPY);
-            emitByte(opcodes, offset);
-        } else {
-            emitByte(opcodes, OP_MUL);
-            emitByte(opcodes, offset);
-            emitByte(opcodes, factor);
-        }
+        emitByte(opcodes, OP_MUL);
+        emitByte(opcodes, offset);
+        emitByte(opcodes, factor);
     }
 
     // Clear the current cell and move the instruction pointer to the end of the
@@ -408,54 +346,51 @@ bool tryCompileMultiplyLoop(std::string& source, uint64_t& instructionPointer, s
     return true;
 }
 
-std::vector<uint8_t> compileByteCode(std::string& source, CompileOptions& co)
+std::vector<uint8_t> compileByteCode(std::string& source)
 {
     std::vector<uint8_t> opcodes;
     std::deque<uint64_t> jumpStack;
-
-    bool enableDeferredMoves = co.allow_OP_INC_OFF && co.allow_OP_DEC_OFF;
-    bool enableMultiplyLoop = co.allow_OP_CLEAR && co.allow_OP_COPY && co.allow_OP_MUL;
 
     for (uint64_t instructionPointer = 0; instructionPointer < source.size(); instructionPointer++) {
         switch (source.at(instructionPointer)) {
         case '>': {
             // Maybe, we don't need to do the move here but can defer it until
             // later.
-            if (enableDeferredMoves && tryCompileDeferredMoves(source, instructionPointer, opcodes)) {
+            if (tryCompileDeferredMoves(source, instructionPointer, opcodes)) {
                 break;
             }
 
             // Count how long the sequence of '>' is. (up until 255)
-            uint8_t n = 1;
-            for (; (instructionPointer + n) < source.size() && source.at(instructionPointer + n) == '>' && n < UINT8_MAX; n++)
+            int8_t n = 1;
+            for (; (instructionPointer + n) < source.size() && source.at(instructionPointer + n) == '>' && n < INT8_MAX; n++)
                 ;
 
             // Also increase the instruction pointer accordingly.
             instructionPointer += n - 1;
 
             // Emit the right bytecodes
-            emitByte(opcodes, OP_RIGHT);
+            emitByte(opcodes, OP_MOVE);
             emitByte(opcodes, n);
             break;
         }
         case '<': {
             // Maybe, we don't need to do the move here but can defer it until
             // later.
-            if (enableDeferredMoves && tryCompileDeferredMoves(source, instructionPointer, opcodes)) {
+            if (tryCompileDeferredMoves(source, instructionPointer, opcodes)) {
                 break;
             }
 
             // Count how long the sequence of '<' is. (up until 255)
             uint8_t n = 1;
-            for (; (instructionPointer + n) < source.size() && source.at(instructionPointer + n) == '<' && n < UINT8_MAX; n++)
+            for (; (instructionPointer + n) < source.size() && source.at(instructionPointer + n) == '<' && n < INT8_MAX; n++)
                 ;
 
             // Also increase the instruction pointer accordingly.
             instructionPointer += n - 1;
 
             // Emit the right bytecodes
-            emitByte(opcodes, OP_LEFT);
-            emitByte(opcodes, n);
+            emitByte(opcodes, OP_MOVE);
+            emitByte(opcodes, -n);
             break;
         }
         case '+': {
@@ -469,6 +404,7 @@ std::vector<uint8_t> compileByteCode(std::string& source, CompileOptions& co)
 
             // Emit the right bytecodes
             emitByte(opcodes, OP_INC);
+            emitByte(opcodes, 0);
             emitByte(opcodes, n);
             break;
         }
@@ -482,8 +418,9 @@ std::vector<uint8_t> compileByteCode(std::string& source, CompileOptions& co)
             instructionPointer += n - 1;
 
             // Emit the right bytecodes
-            emitByte(opcodes, OP_DEC);
-            emitByte(opcodes, n);
+            emitByte(opcodes, OP_INC);
+            emitByte(opcodes, 0);
+            emitByte(opcodes, -n);
             break;
         }
         case '.':
@@ -499,7 +436,7 @@ std::vector<uint8_t> compileByteCode(std::string& source, CompileOptions& co)
             // }
 
             // Next, it could also be a multiplication/copy loop.
-            if (enableMultiplyLoop && tryCompileMultiplyLoop(source, instructionPointer, opcodes)) {
+            if (tryCompileMultiplyLoop(source, instructionPointer, opcodes)) {
                 break;
             }
 
@@ -586,8 +523,7 @@ int main(int argc, char const* argv[])
     std::unordered_map<uint64_t, uint64_t> jumpCache;
 
     // Compile the code to bytecode
-    CompileOptions co = { false, false, true, true, true };
-    auto opcodes = compileByteCode(source, co);
+    auto opcodes = compileByteCode(source);
     if (argc > 2) {
         printByteCode(opcodes);
         std::cout << opcodes.size() << std::endl;
@@ -598,27 +534,17 @@ int main(int argc, char const* argv[])
     for (; instructionPointer < opcodes.size(); instructionPointer++) {
         // std::cout << instructionPointer << " -> " << dataPointer << std::endl;
         switch (opcodes.at(instructionPointer)) {
-        case OP_RIGHT: {
-            uint8_t argument = readByteArgument(opcodes, instructionPointer);
+        case OP_MOVE: {
+            int8_t argument = readByteArgument(opcodes, instructionPointer);
             dataPointer += argument;
             break;
         }
 
-        case OP_LEFT: {
-            uint8_t argument = readByteArgument(opcodes, instructionPointer);
-            dataPointer -= argument;
-            break;
-        }
-
         case OP_INC: {
-            uint8_t argument = readByteArgument(opcodes, instructionPointer);
-            array[dataPointer] += argument;
-            break;
-        }
-
-        case OP_DEC: {
-            uint8_t argument = readByteArgument(opcodes, instructionPointer);
-            array[dataPointer] -= argument;
+            int8_t offset = readByteArgument(opcodes, instructionPointer);
+            int8_t increment = readByteArgument(opcodes, instructionPointer);
+            uint32_t target = dataPointer + (int64_t)offset;
+            array[target] += increment;
             break;
         }
 
@@ -655,13 +581,6 @@ int main(int argc, char const* argv[])
             break;
         }
 
-        case OP_COPY: {
-            int8_t offset = readByteArgument(opcodes, instructionPointer);
-            uint64_t target = dataPointer + (int64_t)offset;
-            array[target] += array[dataPointer];
-            break;
-        }
-
         case OP_MUL: {
             int8_t offset = readByteArgument(opcodes, instructionPointer);
             int8_t factor = readByteArgument(opcodes, instructionPointer);
@@ -669,24 +588,6 @@ int main(int argc, char const* argv[])
             array[target] += array[dataPointer] * factor;
             break;
         }
-
-            // NOTE: We disabled these instructions here because including them
-            // reduces performance significantly.
-            // case OP_INC_OFF: {
-            //     int8_t offset = readByteArgument(opcodes, instructionPointer);
-            //     uint8_t increment = readByteArgument(opcodes, instructionPointer);
-            //     uint64_t target = dataPointer + (int64_t)offset;
-            //     array[target] += increment;
-            //     break;
-            // }
-
-            // case OP_DEC_OFF: {
-            //     int8_t offset = readByteArgument(opcodes, instructionPointer);
-            //     uint8_t decrement = readByteArgument(opcodes, instructionPointer);
-            //     uint64_t target = dataPointer + (int64_t)offset;
-            //     array[target] -= decrement;
-            //     break;
-            // }
 
         case OP_WRITE:
             std::putchar(array[dataPointer]);
