@@ -19,6 +19,9 @@ enum OpCode {
     OP_OPEN, //     8 byte argument to indicate the target position
     OP_CLOSE, //    8 byte argument to indicate the target position
     OP_CLEAR, //    no argument
+    OP_COPY, //     1 singed byte arguments  for the offset
+    OP_MUL, //      2 singed byte arguments one, for the offset and other one for the
+            //      factor
 };
 
 void emitByte(std::vector<uint8_t>& opcodes, uint8_t byte)
@@ -69,14 +72,104 @@ uint64_t readEightByteArgument(std::vector<uint8_t>& opcodes, uint64_t& instruct
     return out;
 }
 
-bool isClearLoop(std::string& source, uint64_t instructionPointer)
+/**
+ * @brief Tries to detect if the next couple of instructions are a clear loop
+ * and if so it will emit a clear instruction.
+ *
+ * @param source
+ * @param instructionPointer
+ * @param opcodes
+ * @return true if it detected and compiled a clear loop, otherwise false.
+ */
+bool tryCompileMultiplyLoop(std::string& source, uint64_t& instructionPointer, std::vector<uint8_t>& opcodes)
 {
-    if (source.length() < instructionPointer + 3)
+    // FIXME: Really thing if we could have an overflow here and how to fix it.
+    std::unordered_map<int8_t, int8_t> offsetFactors;
+
+    uint64_t currInstructionPointer = instructionPointer + 1;
+    int8_t currOffset = 0;
+    for (; source.at(currInstructionPointer) != ']'; currInstructionPointer++) {
+        char ins = source.at(currInstructionPointer);
+        switch (ins) {
+        case '>': {
+            if (currOffset == INT8_MAX)
+                return false;
+
+            currOffset++;
+            break;
+        }
+        case '<': {
+            if (currOffset == INT8_MIN)
+                return false;
+
+            currOffset--;
+            break;
+        }
+        case '+': {
+            if (offsetFactors.find(currOffset) == offsetFactors.end()) {
+                offsetFactors[currOffset] = 0;
+            }
+
+            if (offsetFactors[currOffset] == INT8_MAX)
+                return false;
+
+            offsetFactors[currOffset]++;
+            break;
+        }
+        case '-': {
+            if (offsetFactors.find(currOffset) == offsetFactors.end()) {
+                offsetFactors[currOffset] = 0;
+            }
+
+            if (offsetFactors[currOffset] == INT8_MIN)
+                return false;
+
+            offsetFactors[currOffset]--;
+            break;
+        }
+        default:
+            // This is no longer a multiply loop so just exist and fallback to
+            // the general implementation of loops
+            return false;
+        }
+    }
+
+    // Verify that it is a multiplication loop which must have:
+    // 1) An equal amount of left-right movements
+    if (currOffset != 0)
         return false;
 
-    // return source.at(instructionPointer + 1) == '-' && source.at(instructionPointer + 2) == ']';
-    std::string nextThree = source.substr(instructionPointer, 3);
-    return nextThree == "[-]";
+    // 2) The cell at the initial datapoint must be decremented by one.
+    if (offsetFactors.find(0) == offsetFactors.end() || offsetFactors[0] != -1)
+        return false;
+
+    // FIXME: for debug only allow copy loops
+    // for (const auto it : offsetFactors) {
+    //     // if (it.second < 0 /*|| it.first < 0*/) return false;
+    // }
+
+    // Compile all multiply instructions
+    for (const auto it : offsetFactors) {
+        int8_t offset = it.first;
+        int8_t factor = it.second;
+        if (offset == 0)
+            continue;
+
+        if (factor == 1) {
+            emitByte(opcodes, OP_COPY);
+            emitByte(opcodes, offset);
+        } else {
+            emitByte(opcodes, OP_MUL);
+            emitByte(opcodes, offset);
+            emitByte(opcodes, factor);
+        }
+    }
+
+    // Clear the current cell and move the instruction pointer to the end of the
+    // loop
+    emitByte(opcodes, OP_CLEAR);
+    instructionPointer = currInstructionPointer;
+    return true;
 }
 
 std::vector<uint8_t> compileByteCode(std::string& source)
@@ -84,12 +177,15 @@ std::vector<uint8_t> compileByteCode(std::string& source)
     std::vector<uint8_t> opcodes;
     std::deque<uint64_t> jumpStack;
 
+    // FIXME: We should remove all comments from the sourcecode before we compile
+    // so that run-length encoding works even if there are comments between
+    // instructions.
     for (uint64_t instructionPointer = 0; instructionPointer < source.size(); instructionPointer++) {
         switch (source.at(instructionPointer)) {
         case '>': {
             // Count how long the sequence of '>' is. (up until 255)
             uint8_t n = 1;
-            for (; (instructionPointer + n) < source.size() && source.at(instructionPointer + n) == '>' && n < 255; n++)
+            for (; (instructionPointer + n) < source.size() && source.at(instructionPointer + n) == '>' && n < UINT8_MAX; n++)
                 ;
 
             // Also increase the instruction pointer accordingly.
@@ -103,7 +199,7 @@ std::vector<uint8_t> compileByteCode(std::string& source)
         case '<': {
             // Count how long the sequence of '<' is. (up until 255)
             uint8_t n = 1;
-            for (; (instructionPointer + n) < source.size() && source.at(instructionPointer + n) == '<' && n < 255; n++)
+            for (; (instructionPointer + n) < source.size() && source.at(instructionPointer + n) == '<' && n < UINT8_MAX; n++)
                 ;
 
             // Also increase the instruction pointer accordingly.
@@ -117,7 +213,7 @@ std::vector<uint8_t> compileByteCode(std::string& source)
         case '+': {
             // Count how long the sequence of '+' is. (up until 255)
             uint8_t n = 1;
-            for (; (instructionPointer + n) < source.size() && source.at(instructionPointer + n) == '+' && n < 255; n++)
+            for (; (instructionPointer + n) < source.size() && source.at(instructionPointer + n) == '+' && n < UINT8_MAX; n++)
                 ;
 
             // Also increase the instruction pointer accordingly.
@@ -131,7 +227,7 @@ std::vector<uint8_t> compileByteCode(std::string& source)
         case '-': {
             // Count how long the sequence of '-' is. (up until 255)
             uint8_t n = 1;
-            for (; source.at(instructionPointer + n) == '-' && n < 255; n++)
+            for (; (instructionPointer + n) < source.size() && source.at(instructionPointer + n) == '-' && n < UINT8_MAX; n++)
                 ;
 
             // Also increase the instruction pointer accordingly.
@@ -150,12 +246,17 @@ std::vector<uint8_t> compileByteCode(std::string& source)
             break;
         case '[': {
             // First check if this is a Clear loop `[-]`
-            if (isClearLoop(source, instructionPointer)) {
-                emitByte(opcodes, OP_CLEAR);
-                instructionPointer += 2;
+            // if (tryCompileClearLoop(source, instructionPointer, opcodes)) {
+            //     break;
+            // }
+
+            // Next, it could also be a multiplication/copy loop.
+            if (tryCompileMultiplyLoop(source, instructionPointer, opcodes)) {
                 break;
             }
 
+            // Since it is not a loop we already detected let's implement a
+            // the default version.
             jumpStack.push_front(opcodes.size());
 
             // Emit the bytecode to a open jump and an invalid jump target that
@@ -262,7 +363,27 @@ void printByteCode(std::vector<uint8_t> opcodes)
         }
 
         case OP_CLEAR: {
+            uint64_t pos = instructionPointer;
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
             std::cout << "OP_CLEAR " << std::endl;
+            break;
+        }
+
+        case OP_MUL: {
+            uint64_t pos = instructionPointer;
+            int8_t offset = readByteArgument(opcodes, instructionPointer);
+            int8_t factor = readByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
+            std::cout << "OP_MUL " << (int)offset << " "
+                      << (int)factor << std::endl;
+            break;
+        }
+
+        case OP_COPY: {
+            uint64_t pos = instructionPointer;
+            int8_t offset = readByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
+            std::cout << "OP_COPY " << (int)offset << " " << std::endl;
             break;
         }
 
@@ -278,12 +399,12 @@ void printByteCode(std::vector<uint8_t> opcodes)
 int main(int argc, char const* argv[])
 {
     // Read input file
-    if (argc != 2) {
+    if (argc < 2) {
         std::cerr << "Usage: " << argv[0] << " INPUT" << std::endl;
         exit(1);
     }
 
-    std::ifstream in(argv[1]);
+    std::ifstream in(argv[argc - 1]);
     std::string source(static_cast<std::stringstream const&>(std::stringstream() << in.rdbuf()).str());
 
     // Setup the datastructure
@@ -295,12 +416,15 @@ int main(int argc, char const* argv[])
 
     // Compile the code to bytecode
     auto opcodes = compileByteCode(source);
-    // printByteCode(opcodes);
-    // std::cout << opcodes.size() << std::endl;
-    // exit(0);
+    if (argc > 2) {
+        printByteCode(opcodes);
+        std::cout << opcodes.size() << std::endl;
+        exit(0);
+    }
 
     // Interpret the bytecode
     for (; instructionPointer < opcodes.size(); instructionPointer++) {
+        // std::cout << instructionPointer << " -> " << dataPointer << std::endl;
         switch (opcodes.at(instructionPointer)) {
         case OP_RIGHT: {
             uint8_t argument = readByteArgument(opcodes, instructionPointer);
@@ -356,6 +480,23 @@ int main(int argc, char const* argv[])
 
         case OP_CLEAR: {
             array[dataPointer] = 0;
+            break;
+        }
+
+        case OP_COPY: {
+            uint64_t pos = instructionPointer;
+            int8_t offset = readByteArgument(opcodes, instructionPointer);
+            uint64_t target = dataPointer + (int64_t)offset;
+            array[target] += array[dataPointer];
+            break;
+        }
+
+        case OP_MUL: {
+            uint64_t pos = instructionPointer;
+            int8_t offset = readByteArgument(opcodes, instructionPointer);
+            int8_t factor = readByteArgument(opcodes, instructionPointer);
+            uint64_t target = dataPointer + (int64_t)offset;
+            array[target] += array[dataPointer] * factor;
             break;
         }
 

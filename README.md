@@ -38,6 +38,14 @@ Here are all the patterns it detects:
 - Repeating increment/decrement instructions (`>`, `<`, `+`, `-`) are merged 
   into one opcode with an aditional byte storing the count.
 - Clear loop detection `[-]`.
+- Copy loop detection (something like `[->>+<<]`). Copy loops add the value of the current cell 
+  to another one. In this example we add the current value to the cell two to the
+  right. 
+- [Simple loop](https://github.com/lifthrasiir/esotope-bfc/wiki/Comparison#simple-loop-detection)
+   detection (something like `[->>+>-->>+<<<<]`). These can be optimized to 
+   a series of copy or multiplication opcodes followed by a single clear 
+   instruction. _Note:_ clear loops and copy loops are a special case of simple 
+   loops.
 - Jump instructions (`[`, `]`) store with eight bytes which store the target position 
   (this should just as effective as brainint's jump target caching).
 
@@ -72,3 +80,5 @@ to use `brainint`:
 
 - [Brainfuck on esolang](https://esolangs.org/wiki/Brainfuck)
 - [Brainfuck optimizations](http://calmerthanyouare.org/2015/01/07/optimizing-brainfuck.html)
+- [Brainfuck optimizer in python](https://github.com/matslina/bfoptimization)
+- [Some Brainfuck optimization techniques](https://github.com/lifthrasiir/esotope-bfc/wiki/Comparison)
