@@ -72,9 +72,239 @@ uint64_t readEightByteArgument(std::vector<uint8_t>& opcodes, uint64_t& instruct
     return out;
 }
 
+void printByteCode(std::vector<uint8_t> opcodes)
+{
+    for (uint64_t instructionPointer = 0; instructionPointer < opcodes.size(); instructionPointer++) {
+        switch (opcodes.at(instructionPointer)) {
+        case OP_RIGHT: {
+            uint64_t pos = instructionPointer;
+            uint8_t argument = readByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
+            std::cout << "OP_RIGHT " << (int)argument << std::endl;
+            break;
+        }
+
+        case OP_LEFT: {
+            uint64_t pos = instructionPointer;
+            uint8_t argument = readByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
+            std::cout << "OP_LEFT " << (int)argument << std::endl;
+            break;
+        }
+
+        case OP_INC: {
+            uint64_t pos = instructionPointer;
+            uint8_t argument = readByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
+            std::cout << "OP_INC " << (int)argument << std::endl;
+            break;
+        }
+
+        case OP_INC_OFF: {
+            uint64_t pos = instructionPointer;
+            int8_t offset = readByteArgument(opcodes, instructionPointer);
+            uint8_t increment = readByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
+            std::cout << "OP_INC_OFF " << (int)offset << " " << (int)increment << std::endl;
+            break;
+        }
+
+        case OP_DEC: {
+            uint64_t pos = instructionPointer;
+            uint8_t argument = readByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
+            std::cout << "OP_DEC " << (int)argument << std::endl;
+            break;
+        }
+
+        case OP_DEC_OFF: {
+            uint64_t pos = instructionPointer;
+            int8_t offset = readByteArgument(opcodes, instructionPointer);
+            uint8_t decrement = readByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
+            std::cout << "OP_DEC_OFF " << (int)offset << " " << (int)decrement << std::endl;
+            break;
+        }
+
+        case OP_WRITE: {
+            uint64_t pos = instructionPointer;
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
+            std::cout << "OP_WRITE" << std::endl;
+            break;
+        }
+
+        case OP_READ: {
+            uint64_t pos = instructionPointer;
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
+            std::cout << "OP_READ" << std::endl;
+            break;
+        }
+
+        case OP_OPEN: {
+            uint64_t pos = instructionPointer;
+            uint64_t argument = readEightByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
+            std::cout << "OP_OPEN " << argument << std::endl;
+            break;
+        }
+
+        case OP_CLOSE: {
+            uint64_t pos = instructionPointer;
+            uint64_t argument = readEightByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
+            std::cout << "OP_CLOSE " << argument << std::endl;
+            break;
+        }
+
+        case OP_CLEAR: {
+            uint64_t pos = instructionPointer;
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
+            std::cout << "OP_CLEAR " << std::endl;
+            break;
+        }
+
+        case OP_MUL: {
+            uint64_t pos = instructionPointer;
+            int8_t offset = readByteArgument(opcodes, instructionPointer);
+            int8_t factor = readByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
+            std::cout << "OP_MUL " << (int)offset << " "
+                      << (int)factor << std::endl;
+            break;
+        }
+
+        case OP_COPY: {
+            uint64_t pos = instructionPointer;
+            int8_t offset = readByteArgument(opcodes, instructionPointer);
+            std::cout << std::setfill('0') << std::setw(3) << pos << ": ";
+            std::cout << "OP_COPY " << (int)offset << " " << std::endl;
+            break;
+        }
+
+        default:
+            std::cerr << "ERROR: Unknown opcode!" << std::endl;
+            std::cerr << "InstructionPointer: " << instructionPointer << std::endl;
+            std::cerr << "OpCode: " << (int)opcodes.at(instructionPointer) << std::endl;
+            exit(1);
+        }
+    }
+}
+
+/**
+ * @brief Tries to generate increment and decrement opcodes with an offset and
+ * defers the actual datapointer movements until they are abosoluty necessary,
+ * merging them into a single instruction.
+ *
+ * @param opcodes
+ * @param instructionPointer
+ * @return true
+ * @return false
+ */
+bool tryCompileDeferredMoves(std::string& source, uint64_t& instructionPointer, std::vector<uint8_t>& opcodes)
+{
+    // NOTE: we use a singed 16 bit int here because we want to store increments
+    // and decrements in the same datastructure.
+    std::map<int8_t, int16_t> offsetIncrements;
+
+    uint64_t currInstructionPointer = instructionPointer;
+    int8_t currOffset = 0;
+    for (bool keepLooping = true; source.size() > currInstructionPointer && keepLooping; currInstructionPointer++) {
+        char ins = source.at(currInstructionPointer);
+        switch (ins) {
+        case '>': {
+            if (currOffset == INT8_MAX) {
+                keepLooping = false;
+                break;
+            }
+
+            currOffset++;
+            break;
+        }
+        case '<': {
+            if (currOffset == INT8_MIN) {
+                keepLooping = false;
+                break;
+            }
+
+            currOffset--;
+            break;
+        }
+        case '+': {
+            if (offsetIncrements.find(currOffset) == offsetIncrements.end()) {
+                offsetIncrements[currOffset] = 0;
+            }
+
+            if (offsetIncrements[currOffset] == UINT8_MAX) {
+                keepLooping = false;
+                break;
+            }
+
+            offsetIncrements[currOffset]++;
+            break;
+        }
+        case '-': {
+            if (offsetIncrements.find(currOffset) == offsetIncrements.end()) {
+                offsetIncrements[currOffset] = 0;
+            }
+
+            if (offsetIncrements[currOffset] == UINT8_MAX) {
+                keepLooping = false;
+                break;
+            }
+
+            offsetIncrements[currOffset]--;
+            break;
+        }
+        default:
+            // This is the end of the section for which we can defer the move.
+            currInstructionPointer--;
+            keepLooping = false;
+            break;
+        }
+    }
+
+    // This optimization only makes sense if we have more than 2 increments and
+    // decrements.
+    char lastChar = source.at(currInstructionPointer - 1);
+    if (!((offsetIncrements.size() > 1 && (lastChar == '>' || lastChar == '<')) || offsetIncrements.size() >= 2))
+        return false;
+
+    // Write all increments and decrements with the offset
+    for (auto it : offsetIncrements) {
+        int8_t offset = it.first;
+        int16_t increment = it.second;
+
+        if (increment > 0) {
+            emitByte(opcodes, OP_INC_OFF);
+            emitByte(opcodes, offset);
+            emitByte(opcodes, (uint8_t)increment);
+        } else {
+            emitByte(opcodes, OP_DEC_OFF);
+            emitByte(opcodes, offset);
+            emitByte(opcodes, (uint8_t)(-increment));
+        }
+    }
+
+    // Finally write the deferred move it is not zero
+    if (currOffset > 0) {
+        emitByte(opcodes, OP_RIGHT);
+        emitByte(opcodes, (uint8_t)(currOffset));
+    } else if (currOffset < 0) {
+        emitByte(opcodes, OP_LEFT);
+        emitByte(opcodes, (uint8_t)(-currOffset));
+    }
+
+    // Adjust the instruction pointer to the one before the current one cause
+    // we couldn't yet generate code for the current instruction.
+    instructionPointer = currInstructionPointer - 1;
+    return true;
+}
+
 /**
  * @brief Tries to detect if the next couple of instructions are a clear loop
  * and if so it will emit a clear instruction.
+ * You can find more about this optimization at:
+ * https://github.com/lifthrasiir/esotope-bfc/wiki/Comparison#simple-loop-detection
  *
  * @param source
  * @param instructionPointer
