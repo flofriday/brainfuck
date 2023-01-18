@@ -1,4 +1,4 @@
-file(GLOB H_FILES *.h)
+file(GLOB H_FILES *.hpp)
 file(GLOB SRC_FILES *.cpp)
 
 add_executable(
