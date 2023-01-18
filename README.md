@@ -51,6 +51,10 @@ Here are all the patterns it detects:
 
 For brainbytes OpCodes I was inspired by [this article](http://calmerthanyouare.org/2015/01/07/optimizing-brainfuck.html).
 
+## braindyn
+
+[WIP] braindyn is a jit compiler that uses luajit's [dynasm library](https://luajit.org/dynasm.html).
+
 <!-- Ideas for further programs: brainbyte (a bytecode interpreter with code 
 analysis), brainllvm (a jit compiler with llvm backend), brainunijit 
 (a template based jit with unijit) -->

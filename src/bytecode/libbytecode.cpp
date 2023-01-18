@@ -434,11 +434,6 @@ std::vector<uint8_t> compileByteCode(std::string source)
             emitByte(opcodes, OP_READ);
             break;
         case '[': {
-            // First check if this is a Clear loop `[-]`
-            // if (tryCompileClearLoop(source, instructionPointer, opcodes)) {
-            //     break;
-            // }
-
             // Next, it could also be a multiplication/copy loop.
             if (tryCompileMultiplyLoop(source, instructionPointer, opcodes)) {
                 break;
