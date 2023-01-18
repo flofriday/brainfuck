@@ -55,6 +55,8 @@ For brainbytes OpCodes I was inspired by [this article](http://calmerthanyouare.
 
 [WIP] braindyn is a jit compiler that uses luajit's [dynasm library](https://luajit.org/dynasm.html).
 
+
+
 <!-- Ideas for further programs: brainbyte (a bytecode interpreter with code 
 analysis), brainllvm (a jit compiler with llvm backend), brainunijit 
 (a template based jit with unijit) -->
@@ -65,6 +67,7 @@ You need the following requirements:
 clang, ldd (not needed on macOS), cmake, ninja
 
 ```bash
+git submodule update --init
 mkdir build
 cd build
 cmake -G Ninja ..
