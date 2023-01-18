@@ -25,7 +25,6 @@ int main(int argc, char const* argv[])
     std::memset(array, 0, 30000);
     uint32_t dataPointer = 0;
     uint64_t instructionPointer = 0;
-    std::unordered_map<uint64_t, uint64_t> jumpCache;
 
     // Compile the code to bytecode
     auto opcodes = compileByteCode(source);

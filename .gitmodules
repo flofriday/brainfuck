@@ -1,0 +1,3 @@
+[submodule "src/dynasm/LuaJIT"]
+	path = src/dynasm/LuaJIT
+	url = git@github.com:LuaJIT/LuaJIT.git
