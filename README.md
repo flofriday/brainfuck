@@ -51,11 +51,11 @@ Here are all the patterns it detects:
 
 For brainbytes OpCodes I was inspired by [this article](http://calmerthanyouare.org/2015/01/07/optimizing-brainfuck.html).
 
-## braindyn
+## braindyn 
 
-[WIP] braindyn is a jit compiler that uses luajit's [dynasm library](https://luajit.org/dynasm.html).
-
-
+braindyn is a jit compiler that uses luajit's [DynASM library](https://luajit.org/dynasm.html). It first compiles to the same bytecode as brainbyte but instead of 
+executing it, it compiles the instruction into native x86 or amd64 instructions
+and later executes them.
 
 <!-- Ideas for further programs: brainbyte (a bytecode interpreter with code 
 analysis), brainllvm (a jit compiler with llvm backend), brainunijit 
@@ -89,3 +89,4 @@ to use `brainint`:
 - [Brainfuck optimizations](http://calmerthanyouare.org/2015/01/07/optimizing-brainfuck.html)
 - [Brainfuck optimizer in python](https://github.com/matslina/bfoptimization)
 - [Some Brainfuck optimization techniques](https://github.com/lifthrasiir/esotope-bfc/wiki/Comparison)
+- [DynASM unofficial tutorial](https://corsix.github.io/dynasm-doc/tutorial.html)
