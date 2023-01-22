@@ -7,6 +7,9 @@
 #include "LuaJIT/dynasm/dasm_proto.h"
 #include "LuaJIT/dynasm/dasm_x86.h"
 
+#define TAPE_SIZE 30000
+#define MAX_NESTING 100
+
 #if _WIN32
 #include <Windows.h>
 #else
@@ -64,6 +67,8 @@ static void (*compile(std::vector<uint8_t>& opcodes))(bf_state_t*)
     dasm_State* d;
     unsigned npc = 8;
     unsigned nextpc = 0;
+    int nloops = 0;
+    const char* loops[MAX_NESTING];
 
     // Setup dynasm
     |.if X64
@@ -86,6 +91,8 @@ static void (*compile(std::vector<uint8_t>& opcodes))(bf_state_t*)
     |.if X64
     |.define aPtr, rbx
     |.define aState, r12
+    |.define aTmp, rax
+    |.define aTmpByte, al
     |.if WIN
         |.define aTapeBegin, rsi
         |.define aTapeEnd, rdi
@@ -124,6 +131,8 @@ static void (*compile(std::vector<uint8_t>& opcodes))(bf_state_t*)
     |.else
     |.define aPtr, ebx
     |.define aState, ebp
+    |.define aTmp, eax
+    |.define aTmpByte, al
     |.define aTapeBegin, esi
     |.define aTapeEnd, edi
     |.macro prepcall1, arg1
@@ -166,7 +175,7 @@ static void (*compile(std::vector<uint8_t>& opcodes))(bf_state_t*)
     | prologue
     | mov aPtr, state->tape
     | lea aTapeBegin, [aPtr-1]
-    | lea aTapeEnd, [aPtr+30000-1]
+    | lea aTapeEnd, [aPtr+TAPE_SIZE-1]
 
 
 
@@ -183,30 +192,24 @@ static void (*compile(std::vector<uint8_t>& opcodes))(bf_state_t*)
         case OP_INC: {
             int8_t offset = readByteArgument(opcodes, i);
             int8_t increment = readByteArgument(opcodes, i);
-            | add byte [aPtr + offset], n
+            | add byte [aPtr + offset], increment
             break;
         }
 
         case OP_OPEN: {
-            // If the byte at the datapointer is not zero we don't do anything
-            // if (array[dataPointer] != 0) {
-            //     // jump over argument
-            //     instructionPointer += 8;
-            //     break;
-            // }
-
-            // Jump to the target destination
-            // instructionPointer = argument;
-            uint64_t _argument = readEightByteArgument(opcodes, i);
+            // Skip over the argument
+            readEightByteArgument(opcodes, i);
 
             if(nextpc == npc) {
                 npc *= 2;
                 dasm_growpc(&d, npc);
             }
+
+            // If the byte at the datapointer is not zero we don't do anything
             | cmp byte [aPtr], 0
             | jz =>nextpc+1
             |=>nextpc:
-            loops[nloops++] = nextpc;
+            loops[nloops++] = (char*)nextpc;
             nextpc += 2;
             break;
         }
@@ -228,15 +231,24 @@ static void (*compile(std::vector<uint8_t>& opcodes))(bf_state_t*)
 
         case OP_MUL: {
             int8_t offset = readByteArgument(opcodes, i);
-            int8_t factor = readByteArgument(opcodes, i);
-            // uint64_t target = dataPointer + (int64_t)offset;
-            // array[target] += array[dataPointer] * factor;
+            uint8_t factor = readByteArgument(opcodes, i);
+            int64_t target = (int64_t)offset;
+
+            if (factor == 1) {
+                | mov aTmpByte, [aPtr]
+                | add [aPtr + target], aTmpByte
+            } else {
+                | mov aTmp, factor
+                | imul aTmp, [aPtr]
+                | add [aPtr + target], aTmpByte
+            }
+
             break;
         }
 
         case OP_WRITE:{
             | movzx r0, byte  [aPtr]
-            | preprcall2 aState, r0
+            | prepcall2 aState, r0
             | call aword state->put_ch
             | postcall 2
             break;
@@ -249,7 +261,6 @@ static void (*compile(std::vector<uint8_t>& opcodes))(bf_state_t*)
             | mov byte [aPtr], al
             break;
         }
-
 
         default:
             std::cerr << "ERROR: Unknown opcode!" << std::endl;
@@ -285,8 +296,8 @@ int main(int argc, char const* argv[])
 
     // Compile to machine code
     bf_state_t state;
-    uint8_t array[30000];
-    std::memset(array, 0, 30000);
+    uint8_t array[TAPE_SIZE];
+    std::memset(array, 0, TAPE_SIZE);
     state.tape = array;
     state.get_ch = bf_getchar;
     state.put_ch = bf_putchar;

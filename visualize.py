@@ -4,8 +4,9 @@ import time
 import subprocess
 import pandas as pd
 import concurrent.futures
+import os
 
-PROGRAMS = ["brainint", "brainbyte"]
+PROGRAMS = ["brainint", "brainbyte", "braindyn"]
 BENCHMARKS = ["helloworld.bf", "99bottles.bf", "mandelbrot.bf", "hanoi.bf"]
 
 
@@ -66,7 +67,7 @@ def main():
 
     results = {b: dict() for b in BENCHMARKS}
     for target in targets:
-        elapsed_ms = run_multiple(target, 5)
+        elapsed_ms = run_multiple(target, max(4, os.cpu_count() // 2))
         results[target[1]][target[0]] = elapsed_ms
 
     plot(results)

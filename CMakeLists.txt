@@ -3,6 +3,7 @@ project(brainfuck)
 
 # Configure the compiler
 set(CXX "clang++")
+set(CC "clang")
 set(CMAKE_CXX_STANDARD 20)
 
 # LLD is not available on Apple Darwin
