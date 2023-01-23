@@ -57,6 +57,11 @@ braindyn is a jit compiler that uses luajit's [DynASM library](https://luajit.or
 executing it, it compiles the instruction into native x86 or amd64 instructions
 and later executes them.
 
+One disadvantage of braindyn is that the generated code is written in assembly
+which limits it to x86 and amd64 and porting to other architectures is quite 
+some work. (Yes it would be possible to port it to arm64 for example but I 
+don't have a computer to test it right now.)
+
 <!-- Ideas for further programs: brainbyte (a bytecode interpreter with code 
 analysis), brainllvm (a jit compiler with llvm backend), brainunijit 
 (a template based jit with unijit) -->
