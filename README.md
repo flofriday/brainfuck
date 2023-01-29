@@ -54,7 +54,7 @@ For brainbytes OpCodes I was inspired by [this article](http://calmerthanyouare.
 ## braindyn 
 
 braindyn is a jit compiler that uses luajit's [DynASM library](https://luajit.org/dynasm.html). It first compiles to the same bytecode as brainbyte but instead of 
-executing it, it compiles the instruction into native x86 or amd64 instructions
+executing it, it compiles the instruction to native x86 or amd64 instructions
 and later executes them.
 
 One disadvantage of braindyn is that the generated code is written in assembly
