@@ -29,7 +29,7 @@ int main(int argc, char const* argv[])
     }
 
     // Compile to llvm IR
-    for (size_t i; i < opcodes.size(); i++) {
+    for (uint64_t i = 0; i < opcodes.size(); i++) {
         // std::cout << instructionPointer << " -> " << dataPointer << std::endl;
         switch (opcodes.at(i)) {
         case OP_MOVE: {

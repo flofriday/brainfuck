@@ -7,4 +7,4 @@ if (${CMAKE_HOST_SYSTEM_PROCESSOR} STREQUAL "x86" OR ${CMAKE_HOST_SYSTEM_PROCESS
     add_subdirectory(dynasm)
 endif()
 
-#add_subdirectory(llvm)
+add_subdirectory(llvm)
