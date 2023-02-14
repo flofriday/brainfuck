@@ -11,7 +11,7 @@ if (NOT APPLE)
     add_link_options("-fuse-ld=lld")
 endif ()
 
-set(CMAKE_CXX_FLAGS "-O3 -Wall -W -pedantic")
+set(CMAKE_CXX_FLAGS "-O3 -flto -Wall -W -pedantic")
 
 # Include the source code
 add_subdirectory(src)

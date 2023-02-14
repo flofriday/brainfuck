@@ -23,7 +23,7 @@ int main(int argc, char const* argv[])
     // Setup the datastructure
     uint8_t array[30000];
     std::memset(array, 0, 30000);
-    uint32_t dataPointer = 0;
+    uint8_t* dataPointer = array;
     uint64_t instructionPointer = 0;
 
     // Compile the code to bytecode
@@ -47,14 +47,13 @@ int main(int argc, char const* argv[])
         case OP_INC: {
             int8_t offset = readByteArgument(opcodes, instructionPointer);
             int8_t increment = readByteArgument(opcodes, instructionPointer);
-            uint32_t target = dataPointer + (int64_t)offset;
-            array[target] += increment;
+            *(dataPointer + offset) += increment;
             break;
         }
 
         case OP_OPEN: {
             // If the byte at the datapointer is not zero we don't do anything
-            if (array[dataPointer] != 0) {
+            if (*dataPointer != 0) {
                 // jump over argument
                 instructionPointer += 8;
                 break;
@@ -68,7 +67,7 @@ int main(int argc, char const* argv[])
 
         case OP_CLOSE: {
             // If the byte at the datapointer is zero we don't do anything
-            if (array[dataPointer] == 0) {
+            if (*dataPointer == 0) {
                 // jump over argument
                 instructionPointer += 8;
                 break;
@@ -81,24 +80,23 @@ int main(int argc, char const* argv[])
         }
 
         case OP_CLEAR: {
-            array[dataPointer] = 0;
+            *dataPointer = 0;
             break;
         }
 
         case OP_MUL: {
             int8_t offset = readByteArgument(opcodes, instructionPointer);
             int8_t factor = readByteArgument(opcodes, instructionPointer);
-            uint64_t target = dataPointer + (int64_t)offset;
-            array[target] += array[dataPointer] * factor;
+            *(dataPointer + offset) += *dataPointer * factor;
             break;
         }
 
         case OP_WRITE:
-            std::putchar(array[dataPointer]);
+            std::putchar(*dataPointer);
             break;
 
         case OP_READ:
-            array[dataPointer] = std::getchar();
+            *dataPointer = std::getchar();
             break;
 
         default:

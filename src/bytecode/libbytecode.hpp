@@ -21,5 +21,7 @@ enum OpCode {
 std::vector<uint8_t> compileByteCode(std::string source);
 void printByteCode(std::vector<uint8_t> opcodes);
 
+void ignoreByteArgument(uint64_t& instructionPointer);
 uint8_t readByteArgument(std::vector<uint8_t>& opcodes, uint64_t& instructionPointer);
+void ignoreEightByteArgument(uint64_t& instructionPointer);
 uint64_t readEightByteArgument(std::vector<uint8_t>& opcodes, uint64_t& instructionPointer);

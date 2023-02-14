@@ -37,10 +37,20 @@ void patchEightBytes(std::vector<uint8_t>& opcodes, uint64_t index, uint64_t byt
     }
 }
 
+void ignoreByteArgument(uint64_t& instructionPointer)
+{
+    instructionPointer++;
+}
+
 uint8_t readByteArgument(std::vector<uint8_t>& opcodes, uint64_t& instructionPointer)
 {
     instructionPointer++;
     return opcodes.at(instructionPointer);
+}
+
+void ignoreEightByteArgument(uint64_t& instructionPointer)
+{
+    instructionPointer += 8;
 }
 
 uint64_t readEightByteArgument(std::vector<uint8_t>& opcodes, uint64_t& instructionPointer)
@@ -309,7 +319,7 @@ bool tryCompileMultiplyLoop(std::string& source, uint64_t& instructionPointer, s
         return false;
 
     // Compile all multiply instructions
-    for (const auto it : offsetFactors) {
+    for (const auto& it : offsetFactors) {
         int8_t offset = it.first;
         int8_t factor = it.second;
         if (offset == 0)

@@ -198,7 +198,7 @@ static void (*compile(std::vector<uint8_t>& opcodes))(bf_state_t*)
 
         case OP_OPEN: {
             // Skip over the argument
-            readEightByteArgument(opcodes, i);
+            ignoreEightByteArgument(i);
 
             if(nextpc == npc) {
                 npc *= 2;
@@ -215,7 +215,7 @@ static void (*compile(std::vector<uint8_t>& opcodes))(bf_state_t*)
         }
 
         case OP_CLOSE: {
-            uint64_t _argument = readEightByteArgument(opcodes, i);
+            ignoreEightByteArgument(i);
             --nloops;
             | cmp byte [aPtr], 0
             | jnz =>loops[nloops]
