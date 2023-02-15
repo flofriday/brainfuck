@@ -53,9 +53,15 @@ int main(int argc, char const* argv[])
 
     llvm::BasicBlock* BB = llvm::BasicBlock::Create(*TheContext, "entry", TheFunction);
     Builder->SetInsertPoint(BB);
+
+    // Create the tape
+    // Builder->CreateAlloca(llvm::ArrayType::getInt8Ty(*TheContext));
+    Builder->CreateAlloca(llvm::ArrayType::get(llvm::ArrayType::getInt8Ty(*TheContext), 30000));
+
+    // auto v = llvm::ConstantInt(llvm::IntegerType::getInt64Ty(*TheContext), llvm::APInt((uint64_t)0));
+
     Builder->CreateRet(nullptr);
     llvm::verifyFunction(*TheFunction);
-    // auto v = llvm::ConstantInt(llvm::IntegerType::getInt64Ty(*TheContext), llvm::APInt((uint64_t)0));
     TheFunction->print(llvm::errs());
     return 1;
 
